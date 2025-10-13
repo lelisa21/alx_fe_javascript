@@ -1,0 +1,6 @@
+body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
+    .quote-container { margin-bottom: 20px; padding: 20px; border: 1px solid #ccc; border-radius: 8px; }
+    #quoteDisplay p { margin: 0; }
+    #quoteDisplay p:first-child { font-style: italic; font-size: 1.2em; }
+    .controls { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
+    .controls input, .controls button, .controls select { padding: 8px; }
