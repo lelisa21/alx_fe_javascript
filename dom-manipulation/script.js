@@ -7,6 +7,7 @@ let quotes = [
   { text: "What we think, we become.", category: "Mindfulness" }
 ];
 
+// URLs for mock API calls
 const MOCK_API_URL = "https://jsonplaceholder.typicode.com/posts"; 
 const SYNC_INTERVAL = 60000; 
 
@@ -15,7 +16,9 @@ function saveQuotes() {
   localStorage.setItem('quotes', JSON.stringify(quotes));
 }
 
-
+/**
+ * Loads quotes from local storage, or uses the default array if none are found.
+ */
 function loadQuotes() {
   const storedQuotes = localStorage.getItem('quotes');
   if (storedQuotes) {
@@ -51,13 +54,21 @@ function showRandomQuote() {
     const quote = filteredQuotes[randomIndex];
     document.getElementById('quoteDisplay').innerHTML = `<p>"${quote.text}"</p><p><em>- ${quote.category}</em></p>`;
     
-    // I used session storage to save the last viewed quote
+    // Use session storage to save the last viewed quote
     sessionStorage.setItem('lastViewedQuote', JSON.stringify(quote));
   } else {
     document.getElementById('quoteDisplay').innerHTML = '<p>No quotes available for this category.</p>';
   }
 }
-
+function createAddQuoteForm(){
+    const form = document.createElement('form');
+    const newQuoteText = document.getElementById('newQuoteText').value;
+    const newQuoteCategory = document.getElementById('newQuoteCategory').value;
+    
+    form.appendChild(newQuoteText);
+    form.appendChild(newQuoteCategory);
+    document.body.appendChild(form);
+     }
 function addQuote() {
   const newQuoteText = document.getElementById('newQuoteText').value;
   const newQuoteCategory = document.getElementById('newQuoteCategory').value;
@@ -174,11 +185,12 @@ async function syncQuotes() {
 
 function init() {
   loadQuotes();
+  populateCategories();
   showRandomQuote();
 
   setInterval(syncQuotes, SYNC_INTERVAL);
 
-  document.getElementById('newQuoteBtn').addEventListener('click', showRandomQuote);
+  document.getElementById('newQuote').addEventListener('click', showRandomQuote);
 }
 
 
