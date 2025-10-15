@@ -1,4 +1,3 @@
-
 let quotes = [
   { text: "The greatest glory in living lies not in never falling, but in rising every time we fall.", category: "Inspiration" },
   { text: "The future belongs to those who believe in the beauty of their dreams.", category: "Inspiration" },
@@ -10,11 +9,67 @@ let quotes = [
 const MOCK_API_URL = "https://jsonplaceholder.typicode.com/posts"; 
 const SYNC_INTERVAL = 60000; 
 
+// Step 2: DOM Manipulation - Create form dynamically
+
+function createAddQuoteForm() {
+    const formContainer = document.createElement('div');
+    formContainer.className = 'controls';
+    
+    const heading = document.createElement('h2');
+    heading.textContent = 'Add a New Quote';
+    
+    const quoteInput = document.createElement('input');
+    quoteInput.type = 'text';
+    quoteInput.placeholder = 'Enter a new quote';
+    quoteInput.id = 'newQuoteText';
+    
+    const categoryInput = document.createElement('input');
+    categoryInput.type = 'text';
+    categoryInput.placeholder = 'Enter quote category';
+    categoryInput.id = 'newQuoteCategory';
+    
+    const addButton = document.createElement('button');
+    addButton.textContent = 'Add Quote';
+    addButton.onclick = addQuote;
+    
+    // Append all elements to form container
+
+    formContainer.appendChild(heading);
+    formContainer.appendChild(quoteInput);
+    formContainer.appendChild(categoryInput);
+    formContainer.appendChild(addButton);
+    
+    // Insert the form after the quote container
+
+    const quoteContainer = document.querySelector('.quote-container');
+    quoteContainer.parentNode.insertBefore(formContainer, quoteContainer.nextSibling);
+}
+
+function addQuote() {
+  const newQuoteText = document.getElementById('newQuoteText').value;
+  const newQuoteCategory = document.getElementById('newQuoteCategory').value;
+
+  if (newQuoteText && newQuoteCategory) {
+    quotes.push({ text: newQuoteText, category: newQuoteCategory });
+    saveQuotes();
+
+    document.getElementById('newQuoteText').value = '';
+    document.getElementById('newQuoteCategory').value = '';
+    
+    populateCategories();
+    showRandomQuote();
+    
+    alert('Quote added successfully!');
+  } else {
+    alert('Please enter both a quote and a category.');
+  }
+}
+
+// Web Storage functions
 
 function saveQuotes() {
   localStorage.setItem('quotes', JSON.stringify(quotes));
 }
-
 
 function loadQuotes() {
   const storedQuotes = localStorage.getItem('quotes');
@@ -22,7 +77,6 @@ function loadQuotes() {
     quotes = JSON.parse(storedQuotes);
   }
 }
-
 
 function saveLastFilter() {
   const filter = document.getElementById('categoryFilter').value;
@@ -36,6 +90,8 @@ function loadLastFilter() {
     filterSelect.value = lastFilter;
   }
 }
+
+// Quote display and filtering
 
 function showRandomQuote() {
   const filterSelect = document.getElementById('categoryFilter');
@@ -52,47 +108,17 @@ function showRandomQuote() {
     document.getElementById('quoteDisplay').innerHTML = `<p>"${quote.text}"</p><p><em>- ${quote.category}</em></p>`;
     
     // Use session storage to save the last viewed quote
+
     sessionStorage.setItem('lastViewedQuote', JSON.stringify(quote));
   } else {
     document.getElementById('quoteDisplay').innerHTML = '<p>No quotes available for this category.</p>';
   }
 }
-function createAddQuoteForm(){
-    const form = document.createElement('form');
-    const newQuoteText = document.getElementById('newQuoteText').value;
-    const newQuoteCategory = document.getElementById('newQuoteCategory').value;
-    
-    form.appendChild(newQuoteText);
-    form.appendChild(newQuoteCategory);
-    document.body.appendChild(form);
-     }
-function addQuote() {
-  const newQuoteText = document.getElementById('newQuoteText').value;
-  const newQuoteCategory = document.getElementById('newQuoteCategory').value;
-
-  if (newQuoteText && newQuoteCategory) {
-    quotes.push({ text: newQuoteText, category: newQuoteCategory });
-    saveQuotes();
-
-    document.getElementById('newQuoteText').value = '';
-    document.getElementById('newQuoteCategory').value = '';
-    
-
-    populateCategories();
-    showRandomQuote();
-    
-    alert('Quote added successfully!');
-  } else {
-    alert('Please enter both a quote and a category.');
-  }
-}
-
 
 function populateCategories() {
   const filterSelect = document.getElementById('categoryFilter');
   const uniqueCategories = new Set(quotes.map(quote => quote.category));
   
-
   filterSelect.innerHTML = '<option value="all">All Categories</option>';
   
   uniqueCategories.forEach(category => {
@@ -105,12 +131,12 @@ function populateCategories() {
   loadLastFilter();
 }
 
-
 function filterQuotes() {
   saveLastFilter();
   showRandomQuote();
 }
 
+// JSON Import/Export
 
 function exportQuotes() {
   const jsonQuotes = JSON.stringify(quotes, null, 2);
@@ -127,8 +153,10 @@ function exportQuotes() {
   URL.revokeObjectURL(url);
 }
 
-
 function importFromJsonFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
   const fileReader = new FileReader();
   fileReader.onload = function(event) {
     try {
@@ -142,16 +170,15 @@ function importFromJsonFile(event) {
       alert('Error parsing JSON file. Please ensure the format is correct.');
     }
   };
-  fileReader.readAsText(event.target.files);
+  fileReader.readAsText(file);
 }
 
-
-async function syncQuotes() {
+async function fetchQuotesFromServer() {
   try {
     const response = await fetch(MOCK_API_URL);
     const serverData = await response.json();
     
-    // Simulate quotes from server data
+
     const serverQuotes = serverData.slice(0, 10).map(post => ({
       text: post.body.substring(0, 100) + "...",
       category: "Server"
@@ -179,16 +206,17 @@ async function syncQuotes() {
   }
 }
 
-
 function init() {
   loadQuotes();
+
+  createAddQuoteForm();
+  
   populateCategories();
   showRandomQuote();
 
-  setInterval(syncQuotes, SYNC_INTERVAL);
+  setInterval(fetchQuotesFromServer, SYNC_INTERVAL);
 
   document.getElementById('newQuote').addEventListener('click', showRandomQuote);
 }
-
 
 document.addEventListener('DOMContentLoaded', init);
