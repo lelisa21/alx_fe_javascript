@@ -7,7 +7,6 @@ let quotes = [
   { text: "What we think, we become.", category: "Mindfulness" }
 ];
 
-// URLs for mock API calls
 const MOCK_API_URL = "https://jsonplaceholder.typicode.com/posts"; 
 const SYNC_INTERVAL = 60000; 
 
@@ -16,9 +15,7 @@ function saveQuotes() {
   localStorage.setItem('quotes', JSON.stringify(quotes));
 }
 
-/**
- * Loads quotes from local storage, or uses the default array if none are found.
- */
+
 function loadQuotes() {
   const storedQuotes = localStorage.getItem('quotes');
   if (storedQuotes) {
