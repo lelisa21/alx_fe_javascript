@@ -7,9 +7,9 @@ let quotes = [
 ];
 
 const MOCK_API_URL = "https://jsonplaceholder.typicode.com/posts"; 
-const SYNC_INTERVAL = 30000; // Reduced for testing
+const SYNC_INTERVAL = 30000; 
 
-// Web Storage functions
+
 function saveQuotes() {
   localStorage.setItem('quotes', JSON.stringify(quotes));
 }
@@ -34,7 +34,7 @@ function loadLastFilter() {
   }
 }
 
-// Step 2: DOM Manipulation - Create form dynamically
+
 function createAddQuoteForm() {
     const formContainer = document.createElement('div');
     formContainer.className = 'controls';
@@ -56,13 +56,12 @@ function createAddQuoteForm() {
     addButton.textContent = 'Add Quote';
     addButton.onclick = addQuote;
     
-    // Append all elements to form container
+
     formContainer.appendChild(heading);
     formContainer.appendChild(quoteInput);
     formContainer.appendChild(categoryInput);
     formContainer.appendChild(addButton);
-    
-    // Insert the form after the quote container
+
     const quoteContainer = document.querySelector('.quote-container');
     quoteContainer.parentNode.insertBefore(formContainer, quoteContainer.nextSibling);
 }
@@ -76,7 +75,6 @@ function addQuote() {
     quotes.push(newQuote);
     saveQuotes();
 
-    // Sync new quote to server
     syncQuoteToServer(newQuote);
 
     document.getElementById('newQuoteText').value = '';
@@ -91,7 +89,6 @@ function addQuote() {
   }
 }
 
-// Quote display and filtering
 function showRandomQuote() {
   const filterSelect = document.getElementById('categoryFilter');
   const selectedCategory = filterSelect.value;
@@ -105,8 +102,7 @@ function showRandomQuote() {
     const randomIndex = Math.floor(Math.random() * filteredQuotes.length);
     const quote = filteredQuotes[randomIndex];
     document.getElementById('quoteDisplay').innerHTML = `<p>"${quote.text}"</p><p><em>- ${quote.category}</em></p>`;
-    
-    // Use session storage to save the last viewed quote
+
     sessionStorage.setItem('lastViewedQuote', JSON.stringify(quote));
   } else {
     document.getElementById('quoteDisplay').innerHTML = '<p>No quotes available for this category.</p>';
@@ -162,8 +158,7 @@ function importFromJsonFile(event) {
       saveQuotes();
       populateCategories();
       showRandomQuote();
-      
-      // Sync imported quotes to server
+
       importedQuotes.forEach(quote => syncQuoteToServer(quote));
       
       alert('Quotes imported successfully!');
@@ -174,7 +169,7 @@ function importFromJsonFile(event) {
   fileReader.readAsText(file);
 }
 
-// Step 3: Enhanced Server Syncing with POST requests
+
 async function syncQuoteToServer(quote) {
   try {
     const response = await fetch(MOCK_API_URL, {
