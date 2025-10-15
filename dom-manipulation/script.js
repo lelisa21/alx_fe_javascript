@@ -188,7 +188,7 @@ async function syncQuotes(quote) {
 
     if (response.ok) {
       const serverResponse = await response.json();
-      console.log('Quote synced to server:', serverResponse);
+      console.log("Quotes synced with server!" , serverResponse);
       return serverResponse;
     } else {
       throw new Error('Failed to sync quote to server');
