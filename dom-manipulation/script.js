@@ -75,7 +75,7 @@ function addQuote() {
     quotes.push(newQuote);
     saveQuotes();
 
-    syncQuoteToServer(newQuote);
+    syncQuotes(newQuote);
 
     document.getElementById('newQuoteText').value = '';
     document.getElementById('newQuoteCategory').value = '';
@@ -159,7 +159,7 @@ function importFromJsonFile(event) {
       populateCategories();
       showRandomQuote();
 
-      importedQuotes.forEach(quote => syncQuoteToServer(quote));
+      importedQuotes.forEach(quote => syncQuotes(quote));
       
       alert('Quotes imported successfully!');
     } catch (error) {
@@ -170,7 +170,7 @@ function importFromJsonFile(event) {
 }
 
 
-async function syncQuoteToServer(quote) {
+async function syncQuotes(quote) {
   try {
     const response = await fetch(MOCK_API_URL, {
       method: 'POST',
@@ -203,7 +203,7 @@ async function syncQuoteToServer(quote) {
 
 async function syncAllQuotesToServer() {
   console.log('Syncing all local quotes to server...');
-  const syncPromises = quotes.map(quote => syncQuoteToServer(quote));
+  const syncPromises = quotes.map(quote => syncQuotes(quote));
   const results = await Promise.allSettled(syncPromises);
   
   const successfulSyncs = results.filter(result => result.status === 'fulfilled' && result.value !== null).length;
@@ -244,7 +244,7 @@ async function fetchQuotesFromServer() {
       }
     });
     
-    // Handle new quotes
+
     if (newQuotes.length > 0) {
       quotes.push(...newQuotes);
       saveQuotes();
@@ -252,7 +252,7 @@ async function fetchQuotesFromServer() {
       showSyncNotification(`Added ${newQuotes.length} new quotes from server`);
     }
     
-    // Handle conflicts
+
     if (conflicts.length > 0) {
       handleConflicts(conflicts);
     }
@@ -266,8 +266,8 @@ async function fetchQuotesFromServer() {
 }
 
 function handleConflicts(conflicts) {
-  // Simple conflict resolution: server data takes precedence
-  conflicts.forEach(conflict => {
+
+    conflicts.forEach(conflict => {
     const index = quotes.findIndex(q => q.text === conflict.local.text);
     if (index !== -1) {
       quotes[index] = { ...conflict.server, resolved: true };
@@ -298,7 +298,7 @@ async function retryFailedSyncs() {
   
   for (const failedSync of failedSyncs) {
     try {
-      const result = await syncQuoteToServer(failedSync.quote);
+      const result = await syncQuotes(failedSync.quote);
       if (result) {
         retryResults.push({ success: true, quote: failedSync.quote });
       }
@@ -307,7 +307,6 @@ async function retryFailedSyncs() {
     }
   }
   
-  // Remove successful retries
   const remainingFailures = failedSyncs.filter((_, index) => !retryResults[index].success);
   localStorage.setItem('failedSyncs', JSON.stringify(remainingFailures));
   
@@ -315,8 +314,8 @@ async function retryFailedSyncs() {
 }
 
 function showSyncNotification(message) {
-  // Create or update notification element
-  let notification = document.getElementById('syncNotification');
+
+    let notification = document.getElementById('syncNotification');
   if (!notification) {
     notification = document.createElement('div');
     notification.id = 'syncNotification';
