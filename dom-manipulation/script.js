@@ -7,66 +7,9 @@ let quotes = [
 ];
 
 const MOCK_API_URL = "https://jsonplaceholder.typicode.com/posts"; 
-const SYNC_INTERVAL = 60000; 
-
-// Step 2: DOM Manipulation - Create form dynamically
-
-function createAddQuoteForm() {
-    const formContainer = document.createElement('div');
-    formContainer.className = 'controls';
-    
-    const heading = document.createElement('h2');
-    heading.textContent = 'Add a New Quote';
-    
-    const quoteInput = document.createElement('input');
-    quoteInput.type = 'text';
-    quoteInput.placeholder = 'Enter a new quote';
-    quoteInput.id = 'newQuoteText';
-    
-    const categoryInput = document.createElement('input');
-    categoryInput.type = 'text';
-    categoryInput.placeholder = 'Enter quote category';
-    categoryInput.id = 'newQuoteCategory';
-    
-    const addButton = document.createElement('button');
-    addButton.textContent = 'Add Quote';
-    addButton.onclick = addQuote;
-    
-    // Append all elements to form container
-
-    formContainer.appendChild(heading);
-    formContainer.appendChild(quoteInput);
-    formContainer.appendChild(categoryInput);
-    formContainer.appendChild(addButton);
-    
-    // Insert the form after the quote container
-
-    const quoteContainer = document.querySelector('.quote-container');
-    quoteContainer.parentNode.insertBefore(formContainer, quoteContainer.nextSibling);
-}
-
-function addQuote() {
-  const newQuoteText = document.getElementById('newQuoteText').value;
-  const newQuoteCategory = document.getElementById('newQuoteCategory').value;
-
-  if (newQuoteText && newQuoteCategory) {
-    quotes.push({ text: newQuoteText, category: newQuoteCategory });
-    saveQuotes();
-
-    document.getElementById('newQuoteText').value = '';
-    document.getElementById('newQuoteCategory').value = '';
-    
-    populateCategories();
-    showRandomQuote();
-    
-    alert('Quote added successfully!');
-  } else {
-    alert('Please enter both a quote and a category.');
-  }
-}
+const SYNC_INTERVAL = 30000; // Reduced for testing
 
 // Web Storage functions
-
 function saveQuotes() {
   localStorage.setItem('quotes', JSON.stringify(quotes));
 }
@@ -91,8 +34,64 @@ function loadLastFilter() {
   }
 }
 
-// Quote display and filtering
+// Step 2: DOM Manipulation - Create form dynamically
+function createAddQuoteForm() {
+    const formContainer = document.createElement('div');
+    formContainer.className = 'controls';
+    
+    const heading = document.createElement('h2');
+    heading.textContent = 'Add a New Quote';
+    
+    const quoteInput = document.createElement('input');
+    quoteInput.type = 'text';
+    quoteInput.placeholder = 'Enter a new quote';
+    quoteInput.id = 'newQuoteText';
+    
+    const categoryInput = document.createElement('input');
+    categoryInput.type = 'text';
+    categoryInput.placeholder = 'Enter quote category';
+    categoryInput.id = 'newQuoteCategory';
+    
+    const addButton = document.createElement('button');
+    addButton.textContent = 'Add Quote';
+    addButton.onclick = addQuote;
+    
+    // Append all elements to form container
+    formContainer.appendChild(heading);
+    formContainer.appendChild(quoteInput);
+    formContainer.appendChild(categoryInput);
+    formContainer.appendChild(addButton);
+    
+    // Insert the form after the quote container
+    const quoteContainer = document.querySelector('.quote-container');
+    quoteContainer.parentNode.insertBefore(formContainer, quoteContainer.nextSibling);
+}
 
+function addQuote() {
+  const newQuoteText = document.getElementById('newQuoteText').value;
+  const newQuoteCategory = document.getElementById('newQuoteCategory').value;
+
+  if (newQuoteText && newQuoteCategory) {
+    const newQuote = { text: newQuoteText, category: newQuoteCategory };
+    quotes.push(newQuote);
+    saveQuotes();
+
+    // Sync new quote to server
+    syncQuoteToServer(newQuote);
+
+    document.getElementById('newQuoteText').value = '';
+    document.getElementById('newQuoteCategory').value = '';
+    
+    populateCategories();
+    showRandomQuote();
+    
+    alert('Quote added successfully!');
+  } else {
+    alert('Please enter both a quote and a category.');
+  }
+}
+
+// Quote display and filtering
 function showRandomQuote() {
   const filterSelect = document.getElementById('categoryFilter');
   const selectedCategory = filterSelect.value;
@@ -108,7 +107,6 @@ function showRandomQuote() {
     document.getElementById('quoteDisplay').innerHTML = `<p>"${quote.text}"</p><p><em>- ${quote.category}</em></p>`;
     
     // Use session storage to save the last viewed quote
-
     sessionStorage.setItem('lastViewedQuote', JSON.stringify(quote));
   } else {
     document.getElementById('quoteDisplay').innerHTML = '<p>No quotes available for this category.</p>';
@@ -137,7 +135,6 @@ function filterQuotes() {
 }
 
 // JSON Import/Export
-
 function exportQuotes() {
   const jsonQuotes = JSON.stringify(quotes, null, 2);
   const blob = new Blob([jsonQuotes], { type: 'application/json' });
@@ -165,6 +162,10 @@ function importFromJsonFile(event) {
       saveQuotes();
       populateCategories();
       showRandomQuote();
+      
+      // Sync imported quotes to server
+      importedQuotes.forEach(quote => syncQuoteToServer(quote));
+      
       alert('Quotes imported successfully!');
     } catch (error) {
       alert('Error parsing JSON file. Please ensure the format is correct.');
@@ -173,50 +174,219 @@ function importFromJsonFile(event) {
   fileReader.readAsText(file);
 }
 
+// Step 3: Enhanced Server Syncing with POST requests
+async function syncQuoteToServer(quote) {
+  try {
+    const response = await fetch(MOCK_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        title: `Quote: ${quote.category}`,
+        body: quote.text,
+        userId: 1,
+        quoteCategory: quote.category,
+        localId: Date.now() // Simulate unique ID
+      })
+    });
+
+    if (response.ok) {
+      const serverResponse = await response.json();
+      console.log('Quote synced to server:', serverResponse);
+      return serverResponse;
+    } else {
+      throw new Error('Failed to sync quote to server');
+    }
+  } catch (error) {
+    console.error('Error syncing quote to server:', error);
+    // Store failed sync attempts for retry
+    storeFailedSync(quote);
+    return null;
+  }
+}
+
+async function syncAllQuotesToServer() {
+  console.log('Syncing all local quotes to server...');
+  const syncPromises = quotes.map(quote => syncQuoteToServer(quote));
+  const results = await Promise.allSettled(syncPromises);
+  
+  const successfulSyncs = results.filter(result => result.status === 'fulfilled' && result.value !== null).length;
+  const failedSyncs = results.filter(result => result.status === 'rejected').length;
+  
+  if (successfulSyncs > 0 || failedSyncs > 0) {
+    showSyncNotification(`Sync completed: ${successfulSyncs} successful, ${failedSyncs} failed`);
+  }
+}
+
 async function fetchQuotesFromServer() {
   try {
-    const response = await fetch(MOCK_API_URL);
+    const response = await fetch(`${MOCK_API_URL}?_limit=5`);
     const serverData = await response.json();
     
-
-    const serverQuotes = serverData.slice(0, 10).map(post => ({
-      text: post.body.substring(0, 100) + "...",
-      category: "Server"
+    // Simulate quotes from server data
+    const serverQuotes = serverData.map(post => ({
+      text: post.body || `Server quote: ${post.title}`,
+      category: post.quoteCategory || "Server",
+      serverId: post.id,
+      source: 'server'
     }));
 
     const newQuotes = [];
+    const conflicts = [];
+
     serverQuotes.forEach(serverQuote => {
-      const isNew = !quotes.some(localQuote => localQuote.text === serverQuote.text);
-      if (isNew) {
+      const existingQuote = quotes.find(localQuote => 
+        localQuote.text === serverQuote.text || localQuote.serverId === serverQuote.serverId
+      );
+      
+      if (!existingQuote) {
+        // New quote from server
         newQuotes.push(serverQuote);
+      } else if (existingQuote.source !== 'server' && existingQuote.text !== serverQuote.text) {
+        // Conflict detected
+        conflicts.push({ local: existingQuote, server: serverQuote });
       }
     });
     
+    // Handle new quotes
     if (newQuotes.length > 0) {
       quotes.push(...newQuotes);
       saveQuotes();
       populateCategories();
-      showRandomQuote();
-      alert(`New quotes synced from server! Added ${newQuotes.length} new quotes.`);
-    } else {
-      console.log('No new quotes from server.');
+      showSyncNotification(`Added ${newQuotes.length} new quotes from server`);
     }
+    
+    // Handle conflicts
+    if (conflicts.length > 0) {
+      handleConflicts(conflicts);
+    }
+    
+    return { newQuotes, conflicts };
   } catch (error) {
-    console.error("Error syncing with server:", error);
+    console.error("Error fetching from server:", error);
+    showSyncNotification('Error syncing with server');
+    return { newQuotes: [], conflicts: [] };
   }
 }
 
+function handleConflicts(conflicts) {
+  // Simple conflict resolution: server data takes precedence
+  conflicts.forEach(conflict => {
+    const index = quotes.findIndex(q => q.text === conflict.local.text);
+    if (index !== -1) {
+      quotes[index] = { ...conflict.server, resolved: true };
+    }
+  });
+  
+  saveQuotes();
+  showRandomQuote();
+  
+  showSyncNotification(`Resolved ${conflicts.length} conflicts (server version kept)`);
+}
+
+function storeFailedSync(quote) {
+  const failedSyncs = JSON.parse(localStorage.getItem('failedSyncs') || '[]');
+  failedSyncs.push({
+    quote,
+    timestamp: new Date().toISOString(),
+    attempt: 1
+  });
+  localStorage.setItem('failedSyncs', JSON.stringify(failedSyncs));
+}
+
+async function retryFailedSyncs() {
+  const failedSyncs = JSON.parse(localStorage.getItem('failedSyncs') || '[]');
+  if (failedSyncs.length === 0) return;
+  
+  const retryResults = [];
+  
+  for (const failedSync of failedSyncs) {
+    try {
+      const result = await syncQuoteToServer(failedSync.quote);
+      if (result) {
+        retryResults.push({ success: true, quote: failedSync.quote });
+      }
+    } catch (error) {
+      retryResults.push({ success: false, quote: failedSync.quote });
+    }
+  }
+  
+  // Remove successful retries
+  const remainingFailures = failedSyncs.filter((_, index) => !retryResults[index].success);
+  localStorage.setItem('failedSyncs', JSON.stringify(remainingFailures));
+  
+  showSyncNotification(`Retry completed: ${retryResults.filter(r => r.success).length} successful`);
+}
+
+function showSyncNotification(message) {
+  // Create or update notification element
+  let notification = document.getElementById('syncNotification');
+  if (!notification) {
+    notification = document.createElement('div');
+    notification.id = 'syncNotification';
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #4CAF50;
+      color: white;
+      padding: 15px;
+      border-radius: 5px;
+      z-index: 1000;
+      max-width: 300px;
+    `;
+    document.body.appendChild(notification);
+  }
+  
+  notification.textContent = message;
+  notification.style.display = 'block';
+  
+  setTimeout(() => {
+    notification.style.display = 'none';
+  }, 5000);
+}
+
+// Manual sync controls
+function createSyncControls() {
+  const syncContainer = document.createElement('div');
+  syncContainer.className = 'controls';
+  syncContainer.innerHTML = `
+    <h2>Server Sync</h2>
+    <button onclick="syncAllQuotesToServer()">Sync All to Server</button>
+    <button onclick="fetchQuotesFromServer()">Fetch from Server</button>
+    <button onclick="retryFailedSyncs()">Retry Failed Syncs</button>
+    <div id="syncStatus"></div>
+  `;
+  
+  const dataManagement = document.querySelector('.controls:last-child');
+  dataManagement.parentNode.insertBefore(syncContainer, dataManagement);
+}
+
+// Initialize application
 function init() {
   loadQuotes();
-
+  
+  // Create the form dynamically
   createAddQuoteForm();
+  
+  // Create sync controls
+  createSyncControls();
   
   populateCategories();
   showRandomQuote();
 
+  // Start periodic syncing
   setInterval(fetchQuotesFromServer, SYNC_INTERVAL);
+  setInterval(retryFailedSyncs, SYNC_INTERVAL * 2);
 
   document.getElementById('newQuote').addEventListener('click', showRandomQuote);
+  
+  // Initial sync
+  setTimeout(() => {
+    fetchQuotesFromServer();
+    syncAllQuotesToServer();
+  }, 2000);
 }
 
 document.addEventListener('DOMContentLoaded', init);
